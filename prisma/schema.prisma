@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url = env("DATABASE_URL")
+}
+
+// enums
+enum Status {
+  PENDING
+  ACTIVE
+  BLOCKED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  FILL_IN_THE_BLANK
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum Term {
+  FIRST
+  SECOND
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuizType {
+  EXAM
+  PRACTICE
+}
+
+enum GradeLevel {
+  PRIMARY_ONE
+  PRIMARY_TWO
+  PRIMARY_THREE
+  PRIMARY_FOUR
+  PRIMARY_FIVE
+  PRIMARY_SIX
+  PREP_ONE
+  PREP_TWO
+  PREP_THREE
+  SECONDARY_ONE
+  SECONDARY_TWO
+  SECONDARY_THREE
+}
+
+// models
+model User {
+  id Int @id @default(autoincrement())
+  email String @unique
+  phoneNumber String @unique
+  password String
+  firstName String
+  lastName String
+  birthdate DateTime
+  gender Gender
+  bio String?
+  profileImage String?
+  role Role
+  gradeLevel GradeLevel?
+  specialization String?
+  status Status @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  admin Admin?
+  teacher Teacher?
+  student Student?
+}
+
+model Admin {
+  id Int @id @default(autoincrement())
+  profile User? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profileId Int? @unique
+  createdAt DateTime @default(now())
+  approvedTeachers Teacher[]
+  approvedStudents Student[]
+  createdClasses Class[]
+  createdQuizzes Quiz[]
+}
+
+model Teacher {
+  id Int @id @default(autoincrement())
+  profile User? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profileId Int? @unique
+  admin Admin? @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+  approvedBy Int?
+  createdAt DateTime @default(now())
+  assignedClasses Class[]
+  createdQuizzes Quiz[]
+}
+
+model Student {
+  id Int @id @default(autoincrement())
+  profile User? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profileId Int? @unique
+  admin Admin? @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+  approvedBy Int?
+  createdAt DateTime @default(now())
+  assignedClasses Class[]
+  quizAttempts StudentQuizAttempt[]
+}
+
+model Class {
+  id Int @id @default(autoincrement())
+  admin Admin? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  createdBy Int?
+  className String
+  description String?
+  gradeLevel GradeLevel
+  coverImage String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teachers Teacher[]
+  students Student[]
+  classQuizzes Quiz[]
+}
+
+model Quiz {
+  id Int @id @default(autoincrement())
+  title String
+  subject String
+  description String
+  gradeLevel GradeLevel
+  term Term
+  unit String
+  chapter String
+  lesson String
+  passingScore Int
+  difficultyLevel Difficulty
+  quizImage String?
+  duration Int
+  deadlineDate DateTime?
+  immediateFeedback Boolean?
+  numOfAllowedAttempts Int
+  isPublic Boolean
+  quizType QuizType?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  creatorAdmin Admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  adminId Int?
+  creatorTeacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  teacherId Int?
+  classes Class[]
+  questions Question[]
+  quizAttempts StudentQuizAttempt[]
+}
+
+model Question {
+  id Int @id @default(autoincrement())
+  questionType QuestionType
+  questionText String
+  gradePoints Int
+  timeLimit Int?
+  difficultyLevel Difficulty?
+  questionImage String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answers QuestionAnswer[]
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId Int
+}
+
+model QuestionAnswer {
+  id Int @id @default(autoincrement())
+  isCorrect Boolean
+  answerText String
+  correctAnswerExplanation String?
+  answerAsImage String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId Int
+  selectedByStudent StudentAnswer[]
+}
+
+model StudentQuizAttempt {
+  id Int @id @default(autoincrement())
+  startTime DateTime?
+  endTime DateTime?
+  score Int
+  isCompleted Boolean
+  passed Boolean
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId Int
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId Int
+  answers StudentAnswer[] 
+}
+
+model StudentAnswer {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  studentQuizAttempt StudentQuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId Int
+  selectedAnswer QuestionAnswer? @relation(fields: [selectedAnswerId], references: [id], onDelete: SetNull)
+  selectedAnswerId Int?
+}
